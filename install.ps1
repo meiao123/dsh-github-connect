@@ -1,12 +1,12 @@
-﻿<#
+<#
 .SYNOPSIS
   一键安装 dsh-github-connect 插件（DeepSeek Harness）。
 
   懒人用法（一行）：
-    powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.ps1 | iex"
+    powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.ps1 | iex"
 
   高级用法：
-    .\install.ps1 -Dir E:\dsh\dsh_my_plugin -Profile web
+    .\install.ps1 -Dir "$HOME\.dsh\plugins\dsh-github-connect" -Profile web
 
   脚本自动：克隆/更新代码 -> pnpm 安装依赖 -> 注册进 profile（默认 web）
   -> 提示重启。不会自动重启 GUI（避免中断正在运行的会话）。
@@ -19,7 +19,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $Name = 'dsh-github-connect'
-$RepoUrl = 'https://github.com/Moon-shiyue/dsh-github-connect.git'
+$RepoUrl = 'https://github.com/meiao123/dsh-github-connect.git'
 
 function Die([string]$msg) {
   Write-Host "`n[错误] $msg" -ForegroundColor Red

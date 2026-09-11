@@ -127,8 +127,11 @@ const initiallyConnected = (await call('GET', '/dsh-github/status')).json.connec
     assert.equal(typeof json.lastVerifiedAt, 'string')
     console.log('PASS  POST /dsh-github/verify -> re-validated, lastVerifiedAt=' + json.lastVerifiedAt)
   } else {
-    assert.equal(typeof json.lastVerifiedAt, 'string')
-    console.log('PASS  POST /dsh-github/verify -> not connected (lastVerifiedAt=' + json.lastVerifiedAt + ')')
+    // Nothing is stored, so there is no stamp to write: the route answers with
+    // a null stamp. (A string here would mean a stored credential had just
+    // been verified, which contradicts connected === false.)
+    assert.equal(json.lastVerifiedAt, null)
+    console.log('PASS  POST /dsh-github/verify -> not connected (no credential to verify)')
   }
 }
 
@@ -160,6 +163,39 @@ const initiallyConnected = (await call('GET', '/dsh-github/status')).json.connec
   assert.equal(status, 200)
   assert.ok(typeof json.error === 'string')
   console.log('PASS  device/start with malformed clientId -> error message')
+}
+
+{
+  // Regression: GitHub now issues base62 client ids to newly registered OAuth
+  // Apps (`0v23i1oAZuA2IERUSbdQ`, `Ov23li…`), but the local guard only took
+  // 20 hex chars — a fresh app was rejected before any request was sent.
+  // The shape check must still reject genuinely malformed ids, and it must do
+  // so locally (these two cases never reach the network).
+  const short = await call('POST', '/dsh-github/device/start', {
+    body: JSON.stringify({ clientId: 'Zz00zz00Zz00zz00Zz0', scopes: 'repo' }),
+  })
+  assert.ok(String(short.json.error).includes('格式不正确'), '19-char client id rejected locally')
+  const long = await call('POST', '/dsh-github/device/start', {
+    body: JSON.stringify({ clientId: 'Zz00zz00Zz00zz00Zz000', scopes: 'repo' }),
+  })
+  assert.ok(String(long.json.error).includes('格式不正确'), '21-char client id rejected locally')
+  console.log('PASS  device/start still rejects malformed client ids locally')
+}
+
+if (!initiallyConnected) {
+  // The base62 shape must reach github.com: the local guard passes and GitHub
+  // answers for itself. `0v23i1oAZuA2IERUSbdQ`-shaped but synthetic, so the
+  // response is GitHub's own rejection — never the local format error.
+  const { status, json } = await call('POST', '/dsh-github/device/start', {
+    body: JSON.stringify({ clientId: 'Zz00zz00Zz00zz00Zz00', scopes: 'repo' }),
+  })
+  assert.equal(status, 200)
+  assert.ok(typeof json.error === 'string' || typeof json.userCode === 'string')
+  assert.ok(!String(json.error ?? '').includes('格式不正确'),
+    'base62 client id must pass the local guard, got: ' + String(json.error).slice(0, 80))
+  console.log('PASS  device/start accepts a base62 (new-format) client id')
+} else {
+  console.log('SKIP  base62 client id round trip (would overwrite the remembered client id)')
 }
 
 {

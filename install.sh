@@ -2,14 +2,14 @@
 # 一键安装 dsh-github-connect 插件（DeepSeek Harness, macOS / Linux）
 #
 # 懒人用法（一行）：
-#   curl -fsSL https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.sh | bash
 #
 # 高级用法：
 #   bash install.sh [profile] [dir]     默认 profile=web, dir=$HOME/.dsh/plugins/dsh-github-connect
 set -euo pipefail
 
 NAME="dsh-github-connect"
-REPO="https://github.com/Moon-shiyue/dsh-github-connect.git"
+REPO="https://github.com/meiao123/dsh-github-connect.git"
 PROFILE="${1:-web}"
 DIR="${2:-${HOME}/.dsh/plugins/dsh-github-connect}"
 

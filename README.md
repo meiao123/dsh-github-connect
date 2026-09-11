@@ -24,18 +24,18 @@
 
 **在 DSH 对话里对 AI 说一句话**：
 
-> 请你安装这个插件：https://github.com/Moon-shiyue/dsh-github-connect
+> 请你安装这个插件：https://github.com/meiao123/dsh-github-connect
 
 **或复制下面这一行命令**（Windows，任选其一执行）：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.ps1 | iex"
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.ps1 | iex"
 ```
 
 （macOS / Linux）：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.sh | bash
 ```
 
 一键脚本会自动完成：**克隆代码 → pnpm 安装依赖 → 注册进 profile（默认 `web`）**。
@@ -48,7 +48,7 @@ curl -fsSL https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/mast
 ### 手动安装（可选）
 
 ```powershell
-git clone https://github.com/Moon-shiyue/dsh-github-connect.git
+git clone https://github.com/meiao123/dsh-github-connect.git
 cd dsh-github-connect
 pnpm install
 dsh plugin --profile web add link:<本目录绝对路径>
@@ -107,8 +107,14 @@ dsh plugin --profile web remove dsh-github-connect
 2. 未连接时选择：
    - **设备流登录**：填入 GitHub OAuth App 的 Client ID（在
      [github.com/settings/developers](https://github.com/settings/developers)
-     创建，无需回调地址），按需调整 scopes，点「开始连接」，在打开的页面输入验证码；
+     创建；**务必勾选 Enable Device Flow**，回调地址不会被用到，随便填个合法 URL
+     即可）。老应用的 ID 是 20 位十六进制（`a1b2c3d4e5f6a7b8c9d0`），现在新注册的
+     应用是 20 位 base62（`0v23i1oAZuA2IERUSbdQ`、`Ov23li…`），**两种都支持**；
+     按需调整 scopes，点「开始连接」，在打开的页面输入验证码；
    - **粘贴 Token**：填入 fine-grained PAT（建议只授予需要的仓库与权限）。
+   - 若该 App 处于 GitHub 对新建应用默认开启的「**Expire user access tokens**」状态，
+     建议把 App 的 **Client Secret** 一并填进面板：访问令牌到期前插件会自动用
+     refresh token 续期，不会中途掉线。留空也能用，只是到期后需要重新授权。
 3. 看到「✓ 已连接」后，直接对话即可，例如：
    - “把我账号里的 open issues 列出来”
    - “给 xxx/yyy 仓库提一个 issue，标题…内容…”
@@ -116,8 +122,9 @@ dsh plugin --profile web remove dsh-github-connect
 
 ## 安全说明
 
-- 令牌只保存在本机 `E:\dsh\dsh_my_plugin\.github-auth.json`，除直接发送到
-  `api.github.com` 外不经过任何其他服务器；请勿分享该文件或提交到 git（已 gitignore）。
+- 令牌（以及可选的 Client Secret）只保存在本机插件目录下的 `.github-auth.json`，
+  除直接发送到 `github.com` / `api.github.com` 外不经过任何其他服务器；
+  请勿分享该文件或提交到 git（已 gitignore）。
 - 本插件不会向任何第三方上传数据，client↔host 走本机同源路由（带 Origin 校验）。
 - 断开连接仅删除本地令牌文件；为保险起见也可在 GitHub 的
   Settings → Applications / Tokens 里直接 revoke。
@@ -127,7 +134,7 @@ dsh plugin --profile web remove dsh-github-connect
 ## 目录结构
 
 ```
-dsh_my_plugin/
+dsh-github-connect/
 ├── package.json         # 包元数据 + dsh.bundle / dsh.client 声明
 ├── cordis.patch.yml     # bundle patch 层（insert 一行）
 ├── lib/
@@ -151,5 +158,32 @@ dsh_my_plugin/
     GitHub。插件自带的网络层（`lib/net.js`）会自动读取系统代理与系统证书库，
     重启 `dsh web` 后一般无需任何设置即可用；仍失败时按上面的「网络与代理」
     章节手动配置 `proxy`。
+- **填了 Client ID 却说「格式不正确」？** 0.1.0 的本地校验只接受 20 位十六进制，
+  而 GitHub 现在发给新注册 OAuth App 的是 base62 形式（如 `0v23i1oAZuA2IERUSbdQ`），
+  于是请求还没发出就被拦下了。0.1.1 起两种格式都接受——校验只判断形状，
+  ID 是否真实存在由 GitHub 判定。
+- **用了一段时间后突然 401、连接掉了？** 说明该 OAuth App 开启了
+  「Expire user access tokens」，访问令牌有有效期。0.1.1 起插件会保存 GitHub 下发的
+  `refresh_token`，并在到期前自动续期（GitHub 每次续期都会轮换 refresh token，
+  插件会同步保存新值）。续期失败时错误信息会说明原因与下一步；也可以在连接面板
+  补上 Client Secret，或到 App 设置里关闭该选项。
 - **改代码后如何生效？** 改 client 代码刷新页面即可；改 host（lib/index.js、
   lib/net.js）代码需要重启 `dsh web`（client 入口由 host 启动时扫描，无需前端构建）。
+
+## 版本变更
+
+### 0.1.1
+
+- **修复**：本地 Client ID 校验从「20 位十六进制」放宽为「20 位字母数字」，兼容
+  GitHub 现在发给新注册 OAuth App 的 base62 Client ID（`0v23i1o…` / `Ov23li…`）；
+  `Iv1.` + 16 位的 GitHub App ID 仍然支持。此前这类新应用会在请求发出前就被拒绝。
+- **新增**：支持 GitHub 的过期用户令牌（新建 OAuth App 的默认设置）。保存
+  `refresh_token` 与到期时间，在访问令牌到期前自动续期，并同步保存 GitHub 每次
+  轮换出的新 refresh token；`github_api` 遇到 401 时也会先尝试续期再决定是否断开。
+- **新增**：连接面板增加可选的 Client Secret 输入框（仅续期用），已连接视图显示
+  访问令牌到期时间与续期状态。
+- **修复**：`tests/smoke.mjs` 的「未连接」分支断言 `lastVerifiedAt` 是字符串，而该
+  分支实际返回 `null`——在没有凭据文件的干净克隆上必然失败。
+- **文档**：OAuth App 创建指引补充 Enable Device Flow 与令牌过期说明；安全说明与
+  目录结构里的作者本机路径（`E:\dsh\dsh_my_plugin\`）改为通用描述。
+- 仓库地址指向本 fork：`github.com/meiao123/dsh-github-connect`。

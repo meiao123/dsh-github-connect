@@ -6,11 +6,11 @@
 
 - Windows（一条命令，含克隆/依赖/注册）：
   ```powershell
-  powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.ps1 | iex"
+  powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.ps1 | iex"
   ```
 - macOS / Linux：
   ```bash
-  curl -fsSL https://raw.githubusercontent.com/Moon-shiyue/dsh-github-connect/master/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/meiao123/dsh-github-connect/master/install.sh | bash
   ```
 - 手动等价步骤：`git clone` → `pnpm install` → `dsh plugin --profile web add link:<绝对路径>`。
 
@@ -35,6 +35,14 @@
 - 报错定位：`Bad credentials` = 令牌无效；`UNABLE_TO_VERIFY_LEAF_SIGNATURE` 等网络类错误 =
   代理/证书问题，先看 `lib/net.js` 的自动代理逻辑，仍失败再让用户按 README 配置 `proxy`。
 - 令牌只存本机 `.github-auth.json`（已 gitignore），排障时不要打印令牌内容。
+- Client ID 形状：老 OAuth App = 20 位十六进制；现在新注册的 = 20 位 base62
+  （`0v23i1o…` / `Ov23li…`）；GitHub App = `Iv1.` + 16 位。本地只校验形状，
+  报「Client ID 格式不正确」是形状不对，不是 App 不存在。
+- 令牌生命周期：App 开启「Expire user access tokens」时 GitHub 会下发
+  `refresh_token` + `expires_in`，`lib/index.js` 的 `ensureFreshToken` /
+  `refreshAccessToken` 会在到期前自动续期（GitHub 每次轮换 refresh token）。
+  续期通常需要 App 的 Client Secret（面板可选填）；缺 secret 而续期被拒时，
+  让用户补填 secret 或到 App 设置里关闭该选项。
 
 ## 改代码后如何生效
 
