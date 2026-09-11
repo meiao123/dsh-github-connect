@@ -43,6 +43,11 @@
   `refreshAccessToken` 会在到期前自动续期（GitHub 每次轮换 refresh token）。
   续期通常需要 App 的 Client Secret（面板可选填）；缺 secret 而续期被拒时，
   让用户补填 secret 或到 App 设置里关闭该选项。
+- 安装排障（Windows）：`git clone` 报 `schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS` 时，改用 `git -c http.sslBackend=openssl`（或全局
+  `git config --global http.sslBackend openssl`）重试；`install.ps1` 已自动回退。
+  另注意 Git for Windows 的 `core.autocrlf=true` 来自 `Git\etc\gitconfig`，
+  按字节比较工作树与远端 blob 时必须先归一化行尾。
 
 ## 改代码后如何生效
 

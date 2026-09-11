@@ -58,14 +58,29 @@ if (Test-Path (Join-Path $Dir '.git')) {
   if (-not $SkipPull) {
     Write-Host "==> 更新已有代码: $Dir"
     Push-Location $Dir
-    try { git pull --ff-only | Out-Host } catch { Write-Host "  (更新失败，继续使用现有代码)" -ForegroundColor Yellow }
+    try {
+      git pull --ff-only | Out-Host
+      if ($LASTEXITCODE -ne 0) {
+        Write-Host "  (git pull 失败，改用 OpenSSL TLS 后端重试)" -ForegroundColor Yellow
+        git -c http.sslBackend=openssl pull --ff-only | Out-Host
+      }
+    } catch { Write-Host "  (更新失败，继续使用现有代码)" -ForegroundColor Yellow }
     finally { Pop-Location }
   }
 } else {
   Write-Host "==> 克隆仓库到 $Dir"
   New-Item -ItemType Directory -Force -Path (Split-Path $Dir -Parent) | Out-Null
   git clone --depth 1 $RepoUrl $Dir | Out-Host
-  if ($LASTEXITCODE -ne 0) { Die "git clone 失败。若网络需要代理：git config --global http.proxy http://127.0.0.1:端口 后重试" }
+  if ($LASTEXITCODE -ne 0) {
+    # Git for Windows defaults to the schannel TLS backend, which fails on
+    # machines behind a TLS-intercepting proxy ("AcquireCredentialsHandle
+    # failed: SEC_E_NO_CREDENTIALS") — exactly the setups this plugin targets.
+    # Retry once with the OpenSSL backend, which reads the Windows cert store.
+    Write-Host "  (克隆失败，改用 OpenSSL TLS 后端重试)" -ForegroundColor Yellow
+    if (Test-Path $Dir) { Remove-Item $Dir -Recurse -Force -ErrorAction SilentlyContinue }
+    git -c http.sslBackend=openssl clone --depth 1 $RepoUrl $Dir | Out-Host
+  }
+  if ($LASTEXITCODE -ne 0) { Die "git clone 失败。若网络需要代理：git config --global http.proxy http://127.0.0.1:端口 后重试；若报 schannel/SEC_E_NO_CREDENTIALS，先执行 git config --global http.sslBackend openssl" }
 }
 
 # 6) 依赖

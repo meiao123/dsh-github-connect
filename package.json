@@ -1,6 +1,6 @@
 {
   "name": "dsh-github-connect",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "便携式 GitHub 连接插件：在对话框左下角一键让 DeepSeek 等 AI 连接你的 GitHub 账号（OAuth 设备流 / Personal Access Token），连接后 AI 可通过 github_api 工具直接操作你的 GitHub。",
   "type": "module",
   "main": "lib/index.js",

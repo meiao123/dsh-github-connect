@@ -167,10 +167,23 @@ dsh-github-connect/
   `refresh_token`，并在到期前自动续期（GitHub 每次续期都会轮换 refresh token，
   插件会同步保存新值）。续期失败时错误信息会说明原因与下一步；也可以在连接面板
   补上 Client Secret，或到 App 设置里关闭该选项。
+- **`git clone` 报 `schannel: AcquireCredentialsHandle failed: SEC_E_NO_CREDENTIALS`？**
+  这不是仓库或网络问题，而是 Git for Windows 默认的 schannel TLS 后端在带 TLS 拦截
+  代理的机器上拿不到客户端凭据——恰好是本插件要服务的环境。先执行
+  `git config --global http.sslBackend openssl` 再重试（只想影响单个仓库就去掉
+  `--global`，在该仓库内执行）；本仓库的 `install.ps1` 已内置这个回退，无需手工处理。
 - **改代码后如何生效？** 改 client 代码刷新页面即可；改 host（lib/index.js、
   lib/net.js）代码需要重启 `dsh web`（client 入口由 host 启动时扫描，无需前端构建）。
 
 ## 版本变更
+
+### 0.1.2
+
+- **修复**：`install.ps1` 在带 TLS 拦截代理的机器上克隆必然失败——Git for Windows
+  默认的 schannel 后端报 `schannel: AcquireCredentialsHandle failed:
+  SEC_E_NO_CREDENTIALS`，而这正是本插件想服务的网络环境。现在 `git clone` /
+  `git pull` 失败时会自动改用 OpenSSL TLS 后端重试一次，并在最终失败时给出明确指引。
+- **文档**：常见问题新增该错误的排查方法。
 
 ### 0.1.1
 
